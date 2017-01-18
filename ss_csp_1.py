@@ -63,8 +63,11 @@ class GloabalConstraint(object):
     def get_variable_names(self):
         return self._var_names
 
-    def check(self, state):
+    def check(self, state, var_j_name=None, val_j=None):
         var_name_value_map = {}
+        if var_j_name and val_j:
+            var_name_value_map[var_j_name] = val_j
+
         for name in self._var_names:
             var = state.get_variable_by_name(name)
             value = var.get_assigned_value()
@@ -193,7 +196,28 @@ def global_constraint_checker(state, verbose):
     return True
 
 def global_forward_checking(state, verbose):
-    pass
+    basic = global_constraint_checker(state, verbose)
+    if not basic:
+        return False
+
+    curr_var_name = state.get_current_variable_name()
+    if not curr_var_name:
+        # ROOT
+        return True
+
+    for constraint in state.get_all_constraints():
+        all_var_names = constraint.get_variable_names()
+        for var_j_name in  all_var_names:
+            var_j = state.get_variable_by_name(var_j_name)
+            for val in var_j.get_domain():
+                if not constraint.check(state, var_j_name = var_j_name , val_j = val):
+#                    print "Domain reduced!"
+                    var_j.reduce_domain(val)
+
+            if var_j.domain_size() ==  0:
+                return False
+
+    return True
 
 
 def shift_schedule_problem():
@@ -202,7 +226,7 @@ def shift_schedule_problem():
  #            ('Billy', 'Manager'),
  #            ('Bob', 'Manager'),
  #            ('Christina','Manager'),
- #            ('AA', 'Sales'),
+             ('AA', 'Sales'),
  #            ('BB', 'Sales'),
  #            ('CC', 'Sales'),
  #            ('DD', 'Sales'),
@@ -260,5 +284,5 @@ def shift_weighted_sum(shift_value):
     return reduce(lambda x,y: x+y, shift_value)
 
 if __name__ == '__main__':
-    checker = global_constraint_checker
+    checker = global_forward_checking
     solve_csp_problem(shift_schedule_problem, checker, verbose=False)
