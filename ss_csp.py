@@ -32,56 +32,102 @@ for w in g_weekdays:
     for s in g_shifts:
         g_shift_names.append(w+s)
 
-print "shift names: %s " % g_shift_names
+#print "shift names: %s " % g_shift_names
 
 import itertools
-g_employee_names = ['Alice', 'Bob', 'John', 'Joe', 'Christina']
-g_shift_assignments = []
-for i in xrange( len(g_employee_names) ):
-    g_shift_assignments += itertools.combinations(g_employee_names, i)
+John = ('John', 'Manager')
+Joe = ('Joe', 'Manager')
+Billy = ('Billy', 'Manager')
+Bob = ('Bob', 'Manager')
+Christina = ('Christina','Manager')
+AA=    ('AA', 'Sales')
+BB=    ('BB', 'Sales')
+CC=    ('CC', 'Sales')
+DD=    ('DD', 'Sales')
+EE=    ('EE', 'Sales')
+FF=    ('FF', 'Sales')
+GG=    ('GG', 'Sales')
+HH=    ('HH', 'Sales')
+II=    ('II', 'Sales')
+JJ=    ('JJ', 'Sales')
+KK=    ('KK', 'Sales')
+MM=    ('MM', 'Sales')
+LL=    ('LL', 'Sales')
+NN=    ('NN', 'Sales')
+OO=    ('OO', 'Sales')
+
+managers = [John, Joe, Billy, Bob, Christina]
+sales = [AA, BB, CC, DD, EE, FF, GG, HH, KK]
+
 
 class Shift(Variable):
     """
 
     """
-#    def __init__(self, name, domain, value=None):
-#        super(self.__class__, self).__init__(name, domain, value)
+    def __init__(self, name, domain, manager_num=1, sales_num=3, value=None):
+        """
+        override the __init__ method.
+        """
+        self._manager_num = manager_num
+        self._sales_num = sales_num
+        self._domain_value_generator = None
+        super(Shift, self).__init__(name, domain, value)
 
-    def set_value(self, value):
-        self._value = value
-        for employee in value:
-            employee.shift_assigned(shift)
+    def copy(self):
+        """
+        override
+        """
+        return Shift(self._name, self._domain, self._manager_num, self._sales_num, self._value)
 
-    def index(self):
+    def get_domain(self):
         """
-        return an integer which is the current shift's index in the g_shift_names
+        override
         """
-        return g_shift_names.index( self._name )
+        if not self._domain_value_generator:
+            self._domain_value_generator = self._f()
+        return self._domain_value_generator()
 
-    def weekday(self):
+    def reduce_domain(self, domain_value):
         """
-        return the weekday of the current shift as an integer index of the
-        weekdays list.
+        override
         """
-        pass
+        self._domain.remove(domain_value)
+        self._domain_value_generator = None
+
+    def domain_size(self):
+        """
+        override
+        """
+        if not self._domain_value_generator:
+            self._domain_value_generator = self._f()
+        return len( list( self._domain_value_generator() ))
+
+    def _f(self):
+        def _f_1():
+            managers = []
+            sales = []
+            for name, title in self._domain:
+                if title == 'Manager':
+                    managers.append((name, title,))
+                elif title == 'Sales':
+                    sales.append((name, title,))
+                else:
+                    raise Exception('Unknown title: %s for %s' % (title, name))
+            manager_iter = itertools.combinations( managers, self._manager_num )
+            sales_iter = itertools.combinations( sales, self._sales_num )
+
+            for m in manager_iter:
+                for s in sales_iter:
+                    print 'yielding'
+                    yield m + s
+
+        return _f_1
 
 class Employee(object):
-    def __init__(self, name):
+    def __init__(self, name, title):
         self._name = name
-        self._shifts = [0]*21
+        self._title = title
 
-    def shift_assigned(self, shift):
-        index = shift.index()
-        self._shifts[index] = 1
-
-    def is_one_shift_a_day(self):
-        print "Empleoy %s shifts: %s" %(self._name, self._shifts)
-        s = self._shifts
-        while s:
-            if reduce(lambda a,b: a+b, s[:3]) > 1:
-                return False
-            s = s[3:]
-        return True
 
 def shifts_csv_problem():
     """
@@ -104,28 +150,53 @@ def shifts_csv_problem():
     for n in g_shift_names:
         constraints.append(BinaryConstraint(n, n, length_limit, "1 <= len(%s) <= 3" %n))
 
-#    def no_consecutive_shifts(val_a, val_b, name_a=None, name_b=None):
-#        print "no_consecutive_shifts: %s, %s" %(val_a, val_b)
-#        return set(val_a).isdisjoint(set(val_b))
+    def no_consecutive_shifts(val_a, val_b, name_a=None, name_b=None):
+        print "no_consecutive_shifts: %s, %s" %(val_a, val_b)
+        return set(val_a).isdisjoint(set(val_b))
 
-#    s_names = g_shift_names
-#    while len(s_names) > 1:
-#        n1, n2 = tuple(s_names[:2])
-#        print n1 + "-" + n2
-#        constraints.append(BinaryConstraint(n1, n2, no_consecutive_shifts, "No employee should be on two consecutive shifts: (%s) and (%s)" % (n1, n2)))
-#        s_names.pop(0)
-
-    def one_shift_a_day(val_a, val_b, name_a=None, name_b=None):
-        for e in val_a:
-            if not e.is_one_shift_a_day():
-                return False
-        return True
-
-    for n in g_shift_names:
-        constraints.append(BinaryConstraint(n, n, one_shift_a_day, "One shift a day"))
+    s_names = g_shift_names
+    while len(s_names) > 1:
+        n1, n2 = tuple(s_names[:2])
+        print n1 + "-" + n2
+        constraints.append(BinaryConstraint(n1, n2, no_consecutive_shifts, "No employee should be on two consecutive shifts: (%s) and (%s)" % (n1, n2)))
+        s_names.pop(0)
 
     return CSP(constraints, variables)
 
 if __name__ == '__main__':
-    checker = basic_constraint_checker
-    solve_csp_problem(shifts_csv_problem, checker, verbose=True)
+    #checker = basic_constraint_checker
+    #solve_csp_problem(shifts_csv_problem, checker, verbose=True)
+    shift = Shift('MondayMorning', managers[:1] + sales[:4])
+    assert('MondayMorning' == shift.get_name())
+    assert(4 == shift.domain_size())
+
+    ## test Shift.get_domain()
+    domain_values = []
+    for d in shift.get_domain():
+        domain_values.append(d)
+    print 'dv %s' % (domain_values)
+
+    assert([
+        (John, AA, BB, CC),
+        (John, AA, BB, DD),
+        (John, AA, CC, DD),
+        (John, BB, CC, DD),
+        ] == domain_values )
+
+    ## test Shift.reduce_domain()
+    print 'shift: %s' % shift
+    shift.reduce_domain( AA )
+    assert(1 == shift.domain_size())
+
+    domain_values = []
+    for d in shift.get_domain():
+        domain_values.append(d)
+    print 'dv after remove "AA" %s' % (domain_values)
+    assert( [(John, BB, CC, DD)] == domain_values )
+
+    ## test Shift.copy()
+    shift = Shift('MondayMorning', managers[:1] + sales[:4])
+    new_shift = shift.copy()
+    shift.reduce_domain( AA )
+    assert(1 == shift.domain_size())
+    assert(4 == new_shift.domain_size())

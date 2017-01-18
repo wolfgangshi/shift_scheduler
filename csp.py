@@ -3,7 +3,7 @@
 A General Constraint Satisfaction Problem Solver
 @author: yks
 """
-class Variable:
+class Variable(object):
     """
     Representation of a discrete variable with a finite domain.
     As used in our VD table.
