@@ -219,7 +219,7 @@ def global_forward_checking(state, verbose):
 
     return True
 
-
+import itertools
 def shift_schedule_problem():
     staff = [('John', 'Manager'),
  #            ('Joe', 'Manager'),
@@ -257,32 +257,28 @@ def shift_schedule_problem():
 
     print domain_statistics
 
-    for name, title in staff:
-        ## Create employees
-        variables.append( Employee(name, title, domain) )
-
-    constraints = []
-    def basic_assignment(var_name_map):
-        values = var_name_map.values()
-        assigned_shift_values = zip(*values)
-        for shift_value in assigned_shift_values:
-#            print "assigned shifted values: %s " % (shift_value,)
-            if shift_weighted_sum(shift_value) > 200:
-                return False
-            elif len(values) == len(staff) and shift_weighted_sum(shift_value) < 101:
-                return False
+    count = 0
+    for schedule in itertools.combinations_with_replacement(domain, 5):
+        success_shift_number = 0
+        for shift in zip(*schedule):
+            number_of_staff = reduce(lambda x,y: x+y, shift)
+            if number_of_staff <= 2 and number_of_staff >= 1 :
+                success_shift_number += 1
             else:
-                pass
-        return True
+                break
 
-    constraints.append(GloabalConstraint(tuple([variable.get_name() for variable in variables]),
-                                         basic_assignment,
-                                         "Basic assignment contains at least 1 manager") )
-    return SS_CSP(constraints, variables)
+        if success_shift_number == 21:
+            return schedule
+
+    return None
+
 
 def shift_weighted_sum(shift_value):
     return reduce(lambda x,y: x+y, shift_value)
 
 if __name__ == '__main__':
-    checker = global_forward_checking
-    solve_csp_problem(shift_schedule_problem, checker, verbose=False)
+    result = shift_schedule_problem()
+    if result:
+        print "%s" % (result,)
+    else:
+        print "No solution found"
